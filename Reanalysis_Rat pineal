@@ -1,0 +1,69 @@
+#raw data files for rat pineal was available at NCBI GEO-GSE115723.The daytime datasets with extended references (GSM3188344-day1_extendedRef, GSM3188346_Day2_ExtendedRef) were used
+setwd("C:/Users/raghu/OneDrive - Nanyang Technological University/rat pineal")
+getwd()
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+library(sctransform)
+
+#day 1
+RNpinealday1_extended.data <- Read10X(data.dir = "GSM3188344-day1_extendedRef")
+library(Matrix)
+
+# Read the barcodes, genes, and matrix files
+barcodes <- readLines("GSM3188344-day1_extendedRef/barcodes.tsv.gz")
+genes <- readLines("GSM3188344-day1_extendedRef/features.tsv.gz")  
+matrix <- readMM("GSM3188344-day1_extendedRef/matrix.mtx.gz")
+
+# Check dimensions
+length(barcodes)
+length(genes)
+dim(matrix)
+
+RNpinealday1_extended <- CreateSeuratObject(counts = RNpinealday1_extended.data, project = "rat.pineal", min.cells = 3, min.features = 200)
+RNpinealday1_extended[["percent.mt"]] <- PercentageFeatureSet(RNpinealday1_extended, pattern = "^Mt-")
+VlnPlot(RNpinealday1_extended, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+#day2
+RNpinealday2_extended.data <- Read10X(data.dir = "GSM3188346_Day2_ExtendedRef")
+RNpinealday2_extended <- CreateSeuratObject(counts = RNpinealday2_extended.data, project = "rat.pineal", min.cells = 3, min.features = 200)
+RNpinealday2_extended[["percent.mt"]] <- PercentageFeatureSet(RNpinealday2_extended, pattern = "^Mt-")
+
+Rnpineal_day_integrated <- merge(RNpinealday1_extended, RNpinealday2_extended, add.cell.ids = c("day1", "day2"), project = "Integrated_Rat_pineal")
+VlnPlot(Rnpineal_day_integrated, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+
+Rnpineal_day_integrated <- subset(Rnpineal_day_integrated, subset = nFeature_RNA < 4000 & nCount_RNA < 20000 &  percent.mt < 25)
+Rnpineal_day_integrated<- SCTransform(Rnpineal_day_integrated, vars.to.regress = "percent.mt", verbose = FALSE)
+Rnpineal_day_integrated <- RunPCA(Rnpineal_day_integrated, features = VariableFeatures(object = Rnpineal_day_integrated))
+ElbowPlot(Rnpineal_day_integrated)
+Rnpineal_day_integrated <- FindNeighbors(Rnpineal_day_integrated, dims = 1:5)
+Rnpineal_day_integrated <- FindClusters(Rnpineal_day_integrated, resolution = 0.1)
+Rnpineal_day_integrated <- RunUMAP(Rnpineal_day_integrated,dims = 1:5)
+Rnpineal_day_integrated.markers_prep <-PrepSCTFindMarkers(Rnpineal_day_integrated, assay = "SCT", verbose = TRUE)
+Rnpineal_day_integrated.markers <- FindAllMarkers(Rnpineal_day_integrated.markers_prep, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "roc")
+DoHeatmap(Rnpineal_day_integrated, features = c("Coch","Vwf","Emcn","Lum","Dcn","Asmt","Adrb1","Penk","S100b","Lyz2","C1qa","RT1-Bb")) + NoLegend()
+DoHeatmap(Rnpineal_day_integrated.markers_prep, features = c("Plvap","Clec14a","Flt1","Emcn","Cd200", "Thbd","Tm4sf1","Vwf","Aqp1","Eng","Slfn5","Ramp2","Fgl2","Bst2","Selenom","Sparc","Ifitm3","Igfbp3","Vcam1")) + NoLegend()
+VlnPlot(Rnpineal_day_integrated, features = ("Coch"))
+FeaturePlot(Rnpineal_day_integrated, features = c("Coch", "Lum"), blend = TRUE)
+RidgePlot(Rnpineal_day_integrated, features = c("Coch"))
+DotPlot(Rnpineal_day_integrated, features = c("Coch"))
+
+cluster0.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 0, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+cluster1.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 1, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+cluster2.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 2, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+cluster3.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 3, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)     
+cluster4.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 4, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+cluster5.markers <- FindMarkers(Rnpineal_day_integrated.markers_prep, ident.1 = 5, logfc.threshold = 0.25, test.use = "roc", only.pos = TRUE)
+
+#cluster 0 - β-pinealocyte
+#cluster 1 - α-pinealocyte
+#clutser 2- Endothelium  
+#cluster 5 - Microglia 
+#cluster 3 - Astrocytes
+#cluster 4- VLMCs 
+new.cluster.ids <- c("β-pinealocyte", "α-pinealocyte", "Endothelium", "Astrocytes", "VLMCs ","Microglia ")
+
+names(new.cluster.ids) <- levels(Rnpineal_day_integrated)
+Rnpineal_day_integrated <- RenameIdents(Rnpineal_day_integrated, new.cluster.ids)
+FeaturePlot(Rnpineal_day_integrated, features = c("Coch", "Lum"), blend = TRUE)
+DotPlot(Rnpineal_day_integrated, features = c("Coch"))
