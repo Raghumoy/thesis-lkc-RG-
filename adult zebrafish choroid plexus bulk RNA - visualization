@@ -1,0 +1,43 @@
+#The count matrix of the bulk RNA sequencing dataset was available at NCBI GEO ID-GSE246851
+
+# Load necessary libraries
+library(tidyr)
+library(dplyr)
+
+# Read the CSV file into a data frame
+Adultzebrafish_choroid_counts <- read.csv("GSE246851_Zebrafish_count_table_all.csv", header = FALSE, col.names = c("Combined"))
+
+
+
+# Read the CSV file, skipping the first row
+Adultzebrafish_choroid_counts <- read.csv("GSE246851_Zebrafish_count_table_all.csv", header = FALSE, skip = 1, col.names = c("Combined"))
+
+# Separate the combined column into Ensembl_ID, Gene_name, and TPM
+separated_data <- Adultzebrafish_choroid_counts %>%
+  separate(Combined, into = c("Ensembl_ID", "Gene_name", "TPM"), sep = ";")
+
+# Convert TPM to numeric
+separated_data$TPM <- as.numeric(separated_data$TPM)
+
+# View the separated data
+head(separated_data)
+# Filter the data for the "Coch" gene 
+coch_data <- separated_data %>% filter(Gene_name == "coch") 
+# View the filtered data 
+print(coch_data) 
+# Create a bar plot of TPM values for the "Coch" gene 
+ggplot(coch_data, aes(x = Gene_name, y = TPM, fill = Gene_name)) + geom_bar(stat = "identity") + theme_minimal() + labs(title = "TPM Values for the Coch Gene", x = "Gene", y = "TPM")
+
+
+# Filter the data for the genes of interest
+genes_of_interest <- c("coch", "foxj1b")
+filtered_data <- separated_data %>% filter(Gene_name %in% genes_of_interest)
+
+# View the filtered data
+print(filtered_data)
+
+# Create a bar plot of TPM values for the genes of interest
+ggplot(filtered_data, aes(x = Gene_name, y = TPM, fill = Gene_name)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "TPM Values for Coch and Foxj1b", x = "Gene", y = "TPM")
