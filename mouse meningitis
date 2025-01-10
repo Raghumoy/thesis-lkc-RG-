@@ -1,0 +1,319 @@
+#early post-natal E.coli meningitis model (GSE221678)
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+library(sctransform)
+library(harmony)
+library(Matrix)
+
+#if there is disparrity between dims
+# Read the barcodes, genes, and matrix files
+barcodes <- readLines("JW19_meninges_control_RP1/barcodes.tsv.gz")
+genes <- readLines("JW19_meninges_control_RP1/features.tsv.gz")  
+matrix <- readMM("JW19_meninges_control_RP1/matrix.mtx.gz")
+# Check dimensions
+length(barcodes)
+length(genes)
+dim(matrix)
+install.packages("R.utils")
+library(R.utils)
+gzip("trial/pd_iris_JW19.tsv")
+gzip("trial/fd_iris_JW19.tsv")
+
+#control 1
+Control1.data <- Read10X(data.dir = "JW19_meninges_control_RP1/")
+Control1 <- CreateSeuratObject(counts = Control1.data, project = "mouse.meninges.meningitis", min.cells = 3, min.features = 200)
+Control1[["percent.mt"]] <- PercentageFeatureSet(Control1, pattern = "^Mt-")
+
+VlnPlot(Control1, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+Control1 <- subset(Control1, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+Control1$treatment <- "Control"
+#Verify the addition
+head(Control1@meta.data)
+
+#control 2
+gzip("JW20_meninges_control_RP2/fd_iris_JW20.tsv")
+gzip("JW20_meninges_control_RP2/pd_iris_JW20.tsv")
+Control2.data <- Read10X(data.dir = "JW20_meninges_control_RP2/")
+Control2 <- CreateSeuratObject(counts = Control2.data, project = "mouse.meninges.meningitis", min.cells = 3, min.features = 200)
+Control2[["percent.mt"]] <- PercentageFeatureSet(Control2, pattern = "^Mt-")
+VlnPlot(Control2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+Control2 <- subset(Control2, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+Control2$treatment <- "Control"
+# Verify the addition
+head(Control2@meta.data)
+
+#Infected1
+gzip("JW21_meninges_infected_RP1/pd_iris_JW21.tsv")
+gzip("JW21_meninges_infected_RP1/fd_iris_JW21.tsv")
+
+Infected1.data <- Read10X(data.dir = "JW21_meninges_infected_RP1/")
+Infected1 <- CreateSeuratObject(counts = Infected1.data, project = "mouse.meninges.meningitis", min.cells = 3, min.features = 200)
+Infected1[["percent.mt"]] <- PercentageFeatureSet(Infected1, pattern = "^Mt-")
+VlnPlot(Infected1, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+Infected1 <- subset(Infected1, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+Infected1$treatment <- "Infected"
+# Verify the addition
+head(Infected1@meta.data)
+
+#Infected2
+gzip("JW22_meninges_infected_RP2/barcodes.tsv")
+gzip("JW22_meninges_infected_RP2/features.tsv")
+
+Infected2.data <- Read10X(data.dir = "JW22_meninges_infected_RP2/")
+Infected2 <- CreateSeuratObject(counts = Infected2.data, project = "mouse.meninges.meningitis", min.cells = 3, min.features = 200)
+Infected2[["percent.mt"]] <- PercentageFeatureSet(Infected2, pattern = "^Mt-")
+VlnPlot(Infected2, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+Infected2 <- subset(Infected2, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+Infected2$treatment <- "Infected"
+# Verify the addition
+head(Infected2@meta.data)
+
+#Infected3
+gzip("JW23_meninges_infected_RP3/barcodes.tsv")
+gzip("JW23_meninges_infected_RP3/features.tsv")
+
+
+Infected3.data <- Read10X(data.dir = "JW23_meninges_infected_RP3/")
+Infected3 <- CreateSeuratObject(counts = Infected3.data, project = "mouse.meninges.meningitis", min.cells = 3, min.features = 200)
+Infected3[["percent.mt"]] <- PercentageFeatureSet(Infected3, pattern = "^Mt-")
+VlnPlot(Infected3, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+Infected3 <- subset(Infected3, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+Infected3$treatment <- "Infected"
+# Verify the addition
+head(Infected3@meta.data)
+
+#control integrated 
+mouse_meningitis_Control_integration <- merge(Control1, Control2, project = "Integrated_Control_mousemeningitis")
+VlnPlot(mouse_meningitis_Control_integration, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+mouse_meningitis_Control_integration <- subset(mouse_meningitis_Control_integration, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+mouse_meningitis_Control_integration <- NormalizeData(mouse_meningitis_Control_integration)
+mouse_meningitis_Control_integration <- FindVariableFeatures(mouse_meningitis_Control_integration)
+mouse_meningitis_Control_integration <- ScaleData(mouse_meningitis_Control_integration)
+mouse_meningitis_Control_integration <- RunPCA(mouse_meningitis_Control_integration, features = VariableFeatures(object = mouse_meningitis_Control_integration))
+ElbowPlot(mouse_meningitis_Control_integration)
+mouse_meningitis_Control_integration <- FindNeighbors(mouse_meningitis_Control_integration, dims = 1:15)
+mouse_meningitis_Control_integration <- FindClusters(mouse_meningitis_Control_integration, resolution = 0.3, cluster.name = ("unintegrated_control_cluster_trial1"))
+mouse_meningitis_Control_integration <- RunUMAP(mouse_meningitis_Control_integration, dims = 1:15)
+DimPlot(mouse_meningitis_Control_integration, reduction = "umap")
+DoHeatmap(mouse_meningitis_Control_integration, features = c("Coch","Ptprc","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip","Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4","Ccr5","Siglech","Hexb","P2ry12","Ctsk","Atp6v0d2","Igtb3","Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc","Abcc9","Notch3","Pdgfrb","Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh1","Cldh11","Tjp1","Runx2","Alpl","Rbfox3","Nrxn3","Gfap")) + NoLegend()
+
+mouse_meningitis_Control_integration <- IntegrateLayers(
+  object = mouse_meningitis_Control_integration, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "harmony",
+  verbose = FALSE
+)
+mouse_meningitis_Control_integration <- FindNeighbors(mouse_meningitis_Control_integration, reduction="harmony",dims = 1:15)
+
+mouse_meningitis_Control_integration0.2 <- FindClusters(mouse_meningitis_Control_integration, resolution = 0.2, cluster.name = ("harmony_control_cluster_trial0.2"))
+
+mouse_meningitis_Control_integration0.2 <- RunUMAP(mouse_meningitis_Control_integration0.2, dims = 1:15, reduction.name = "umap.harmony0.2")
+harmony_dimplot1 <- DimPlot(
+    mouse_meningitis_Control_integration0.2,
+    reduction = "umap.harmony0.2",
+    group.by = c("treatment", "unintegrated_control_cluster_trial1", "harmony_control_cluster_trial0.2"),
+   combine = FALSE, label.size = 2)
+
+# Join the data layers in the Seurat object
+mouse_meningitis_Control_integration0.2 <- JoinLayers(mouse_meningitis_Control_integration0.2)
+
+# Verify that the layers are joined
+slotNames(mouse_meningitis_Control_integration[["RNA"]])
+mouse_meningitis_Control_integration.markers <- FindAllMarkers(mouse_meningitis_Control_integration, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "roc")
+DoHeatmap(mouse_meningitis_Control_integration, features = c("Coch","Ptprc","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip","Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4","Ccr5","Siglech","Hexb","P2ry12","Ctsk","Atp6v0d2","Igtb3","Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc","Abcc9","Notch3","Pdgfrb","Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh1","Cldh11","Tjp1","Runx2","Alpl","Rbfox3","Nrxn3","Gfap")) + NoLegend()
+
+VlnPlot(mouse_meningitis_Control_integration, features = ("Coch"))
+FeaturePlot(mouse_meningitis_Control_integration, features = c("Coch", "Lum"), blend = TRUE)
+RidgePlot(mouse_meningitis_Control_integration, features = c("Coch"))
+DotPlot(mouse_meningitis_Control_integration, features = c("Coch"))
+
+#myeloid 
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Coch","Ptprc"))+ NoLegend()
+#Macrophages
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Coch","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2"))+ NoLegend()
+#2
+#Monocytes/Monocytes-derived cells
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip"))+ NoLegend()
+#ILC2 ILC3 T cells
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4"))+ NoLegend()
+#Microglia
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Ccr5","Siglech","Hexb","P2ry12"))+ NoLegend()
+#5
+#Osteoclasts and blasts 
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("St18","Ctsk","Atp6v0d2","Igtb3","Runx2","Alpl"))+ NoLegend()
+# blasts 5 
+#Endothelial cells#Endothelial cell, arachnoid#Endothelial cell, dura 
+#Endothelial cell, dura, VWF+#Endothelial cell, artery
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc"))+ NoLegend()
+#6 dural EC, 7 ec arachnoid
+
+#Mural cells
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Abcc9","Notch3","Pdgfrb"))+ NoLegend()
+#10
+ #Fibroblast, pia #Fibroblast, arachnoid,#Fibroblast, dura 1, 2, 3
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh18", "Ebf1","Nav2", "Temm3","Adam23","Col11a1","Tmeff2","Galnt13","Adamts13","Slc47a1"))+ NoLegend()
+#0 dural fibroblasts 1&2, 1 pial, 4 Fb-arachnoid, 3- Fb-dural3
+#Arachnoid barrier 
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Cdh1","Cldh11","Tjp1")) + NoLegend()
+
+#Neurons#Glia#Mitotic cells
+DoHeatmap(mouse_meningitis_Control_integration0.2, features = c("Rbfox3","Nrxn3","Gfap","Aqp4","Top2a","Mki67")) + NoLegend()
+#11 neurons, 8 glia, 9 mitotic cells
+
+#cluster 0 - con-Fb-dural1,2
+#cluster 1 - con-Fb-pial
+#clutser 2- con-Macrophages 
+#cluster 3 - con-Fb-dural3
+#cluster 4- con-Fb-arach
+#cluster 5 - con-Osteoblasts 
+#cluster 6 - con-EC-dural
+#cluster 7- con-EC-arach
+#cluster 8 - con-Glia
+#cluster 9- con-Mitotic cells
+#cluster 10 - con-Mural cells
+#cluster 11- con-Neurons
+
+new.cluster.ids <- c("con-Fb-dural1,2", "con-Fb-pial", "con-Macrophages", "con-Fb-dural3", "con-Fb-arach ","con-Osteoblasts","con-EC-dural","con-EC-arach","con-Glia","con-Mitotic cells","con-Mural cells","con-Neurons")
+
+names(new.cluster.ids) <- levels(mouse_meningitis_Control_integration0.2)
+unique(Idents(mouse_meningitis_Control_integration0.2))
+mouse_meningitis_Control_integration0.2 <- RenameIdents(mouse_meningitis_Control_integration0.2, new.cluster.ids)
+
+saveRDS(mouse_meningitis_Control_integration0.2, file = "mouse_meningitis_integration_control.rds")
+cluster_ids <- Idents(mouse_meningitis_Control_integration0.2) 
+# Add cluster identities as a new column in the metadata 
+mouse_meningitis_Control_integration0.2 <- AddMetaData(object = mouse_meningitis_Control_integration0.2, metadata = cluster_ids, col.name = "cluster_id") # Verify the new column in the metadata 
+head(mouse_meningitis_Control_integration0.2@meta.data)
+
+
+#Infection integrated 
+
+mouse_meningitis_Infectted_integration <- merge(Infected1, y = c(Infected2, Infected3), add.cell.ids = c("Infected1", "Infected2", "Infected3"), project = "Integrated_infected_mousemeningitis")
+VlnPlot(mouse_meningitis_Infectted_integration, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+mouse_meningitis_Infectted_integration <- subset(mouse_meningitis_Infectted_integration, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+
+mouse_meningitis_Infectted_integration <- NormalizeData(mouse_meningitis_Infectted_integration)
+mouse_meningitis_Infectted_integration <- FindVariableFeatures(mouse_meningitis_Infectted_integration)
+mouse_meningitis_Infectted_integration <- ScaleData(mouse_meningitis_Infectted_integration)
+mouse_meningitis_Infectted_integration <- RunPCA(mouse_meningitis_Infectted_integration, features = VariableFeatures(object = mouse_meningitis_Infectted_integration))
+ElbowPlot(mouse_meningitis_Infectted_integration)
+mouse_meningitis_Infectted_integration <- FindNeighbors(mouse_meningitis_Infectted_integration, dims = 1:15)
+mouse_meningitis_Infectted_integration <- FindClusters(mouse_meningitis_Infectted_integration, resolution = 0.3, cluster.name = ("unintegrated cluster_trial1"))
+mouse_meningitis_Infectted_integration <- RunUMAP(mouse_meningitis_Infectted_integration, dims = 1:15)
+DimPlot(mouse_meningitis_Infectted_integration, reduction = "umap")
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Coch","Ptprc","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip","Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4","Ccr5","Siglech","Hexb","P2ry12","Ctsk","Atp6v0d2","Igtb3","Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc","Abcc9","Notch3","Pdgfrb","Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh1","Cldh11","Tjp1","Runx2","Alpl","Rbfox3","Nrxn3","Gfap")) + NoLegend()
+
+mouse_meningitis_Infectted_integration <- IntegrateLayers(
+  object = mouse_meningitis_Infectted_integration, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "harmony",
+  verbose = FALSE)
+mouse_meningitis_Infectted_integration <- FindNeighbors(mouse_meningitis_Infectted_integration, reduction="harmony",dims = 1:15)
+mouse_meningitis_Infectted_integration <- FindClusters(mouse_meningitis_Infectted_integration, resolution = 0.3, cluster.name = ("harmony_cluster_Infected"))
+mouse_meningitis_Infectted_integration <- RunUMAP(mouse_meningitis_Infectted_integration, dims = 1:15, reduction.name = "Infected_umap.harmony")
+harmony_dimplot_infected <- DimPlot(
+  mouse_meningitis_Infectted_integration,
+  reduction = "Infected_umap.harmony",
+  group.by = c("treatment", "unintegrated cluster_trial1", "harmony_cluster_Infected"),
+  combine = FALSE, label.size = 2)
+# Join the data layers in the Seurat object
+mouse_meningitis_Infectted_integration <- JoinLayers(mouse_meningitis_Infectted_integration)
+
+# Verify that the layers are joined
+slotNames(mouse_meningitis_Infectted_integration[["RNA"]])
+mouse_meningitis_Infectted_integration.markers <- FindAllMarkers(mouse_meningitis_Infectted_integration, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, test.use = "roc")
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Coch","Ptprc","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip","Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4","Ccr5","Siglech","Hexb","P2ry12","Ctsk","Atp6v0d2","Igtb3","Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc","Abcc9","Notch3","Pdgfrb","Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh1","Cldh11","Tjp1","Runx2","Alpl","Rbfox3","Nrxn3","Gfap")) + NoLegend()
+
+VlnPlot(mouse_meningitis_Infectted_integration, features = ("Coch"))
+FeaturePlot(mouse_meningitis_Infectted_integration, features = c("Coch", "Lum"), blend = TRUE)
+RidgePlot(mouse_meningitis_Infectted_integration, features = c("Coch"))
+DotPlot(mouse_meningitis_Infectted_integration, features = c("Coch"))
+
+#myeloid 
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Coch","Ptprc"))+ NoLegend()
+#Macrophages
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Coch","Csf1r","C1qa","F13a1","Adgre1","Mrc1","Cd206","Lyve1","Apoe","Spi1","Ccl2"))+ NoLegend()
+#3-Macrophages
+#Monocytes/Monocytes-derived cells
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Ccl2","Ccr2","H2-d1","Ly6c2","S100a8","S100a9","Cytip"))+ NoLegend()
+#ILC2 ILC3 T cells
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Il7r","Gata3","Il1rl1","Rorc","Rorgt","Cd3e","Cd4"))+ NoLegend()
+#Microglia
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Ccr5","Siglech","Hexb","P2ry12"))+ NoLegend()
+
+#Osteoclasts and blasts 
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("St18","Ctsk","Atp6v0d2","Igtb3","Runx2","Alpl"))+ NoLegend()
+#6- osteoblasts
+#Endothelial cells#Endothelial cell, arachnoid#Endothelial cell, dura 
+#Endothelial cell, dura, VWF+#Endothelial cell, artery
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Pecam1","Erg","Tek","Cldn5","Lef1","Slc7a5","Lrp8","Slco1c1","Plvap","Vwf","Bmx","Fbln5","Vegfc"))+ NoLegend()
+#8&9 8- EC -arachnoid, 9 EC dural
+
+#Mural cells
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Abcc9","Notch3","Pdgfrb"))+ NoLegend()
+#12 -mural cells
+#Fibroblast, pia #Fibroblast, arachnoid,#Fibroblast, dura 1, 2, 3
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Col1a1","Pdgfra","Lama1","Cxcl12","Col15a1","Nnat","Aldh1a2","Ptgds","Fxyd5","Foxp1","Mgp","Cdh18", "Ebf1","Nav2", "Temm3","Adam23","Col11a1","Tmeff2","Galnt13","Adamts13","Slc47a1"))+ NoLegend()
+#0-Fb-pial, 1- Fb-dural 3, 2- Fb-dural 1, 4- Fb-arachnoid, 
+#Arachnoid barrier 
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Cdh1","Cldh11","Tjp1")) + NoLegend()
+#9
+#Neurons#Glia#Mitotic cells
+DoHeatmap(mouse_meningitis_Infectted_integration, features = c("Rbfox3","Nrxn3","Gfap","Aqp4","Top2a","Mki67")) + NoLegend()
+#7 -glia, 11- neurons,10 -mitotic cells 
+
+#cluster 0 - inf-Fb-pial
+#cluster 1 - inf-Fb-dural3
+#clutser 2- inf-dural1,2 
+#cluster 3 - inf-Fb-Macrophages
+#cluster 4- inf-Fb-arach
+#cluster 5 - inf- Unknown
+#cluster 6 - inf-Osteoblasts 
+
+#cluster 7- inf-Glia
+#cluster 8 - inf-EC-arach
+#cluster 9- inf-EC-dural
+#cluster 10 - inf-Mitotic cells
+#cluster 11- inf-Neurons
+#cluster 12- inf-Mural cells
+#cluster 13- inf-myeloid cells
+#cluster 14- inf-Mitotic cells 2
+
+new.cluster.infected.ids <- c("inf-Fb-pial", "inf-Fb-dural 3", "inf-Fb-dural 1,2", "inf-Macrophages", "inf-Fb-arach ","inf-Unknown","inf-Osteoblasts","inf-Glial","inf-EC-arach","inf-EC-dural","inf-Mitotic cells","inf-Neurons","inf-Mural cells","inf-Myeloid cells", "inf-Mitotic cells 2")
+
+names(new.cluster.infected.ids) <- levels(mouse_meningitis_Infectted_integration)
+unique(Idents(mouse_meningitis_Infectted_integration))
+mouse_meningitis_Infectted_integration <- RenameIdents(mouse_meningitis_Infectted_integration, new.cluster.infected.ids)
+
+saveRDS(mouse_meningitis_Infectted_integration, file = "mouse_meningitis_integration_infected.rds")
+cluster_ids <- Idents(mouse_meningitis_Infectted_integration) 
+
+
+mouse_meningitis_Infectted_integration <- AddMetaData(object = mouse_meningitis_Infectted_integration, metadata = cluster_ids, col.name = "cluster_id") # Verify the new column in the metadata 
+head(mouse_meningitis_Infectted_integration@meta.data)
+
+
+mouse_meningitis_integration1 <- merge(mouse_meningitis_Control_integration0.2, mouse_meningitis_Infectted_integration, project = "Integrated_trial2_mousemeningitis")
+VlnPlot(mouse_meningitis_integration1, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+mouse_meningitis_integration1 <- subset(mouse_meningitis_integration1, subset = nFeature_RNA < 2500 & nCount_RNA < 6000 & nCount_RNA > 500 & percent.mt < 1)
+
+split_data <- SplitObject(mouse_meningitis_integration1, split.by = "treatment")
+mouse_meningitis_integration1 <- NormalizeData(mouse_meningitis_integration1)
+mouse_meningitis_integration1 <- FindVariableFeatures(mouse_meningitis_integration1)
+mouse_meningitis_integration1 <- ScaleData(mouse_meningitis_integration1)
+mouse_meningitis_integration1 <- RunPCA(mouse_meningitis_integration1, features = VariableFeatures(object = mouse_meningitis_integration1))
+ElbowPlot(mouse_meningitis_integration1)
+mouse_meningitis_integration1 <- FindNeighbors(mouse_meningitis_integration1, dims = 1:15)
+mouse_meningitis_integration1 <- FindClusters(mouse_meningitis_integration1, resolution = 0.3, cluster.name = ("unintegrated cluster_trial1"))
+mouse_meningitis_integration1 <- RunUMAP(mouse_meningitis_integration1, dims = 1:15)
+DimPlot(mouse_meningitis_integration1, reduction = "umap",group.by = c("treatment"))
+mouse_meningitis_integration1 <- JoinLayers(mouse_meningitis_integration1)
+mouse_meningitis_integration1.markers <- FindAllMarkers(mouse_meningitis_integration1, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25, split.by=cluster_ids) 
+Infected_fb_pialmarkers <- FindMarkers(mouse_meningitis_integration1, ident.1 = "inf-Fb-pial", ident.2 = "con-Fb-pial", logfc.threshold = 0.25)
+Infected_fb_pialmarkers_2 <- FindMarkers(mouse_meningitis_integration1, ident.1 = "inf-Fb-pial", ident.2 = "con-Fb-pial", logfc.threshold = 0.25)
+VlnPlot(mouse_meningitis_integration1, features = ("Coch"))
+FeaturePlot(mouse_meningitis_integration1, features = c("Coch"))
+
+
+
+
