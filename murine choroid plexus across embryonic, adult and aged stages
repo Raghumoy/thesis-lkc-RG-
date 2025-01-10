@@ -1,0 +1,211 @@
+setwd("C:/Users/raghu/OneDrive - Nanyang Technological University/multiage murine choroid")
+getwd()
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+library(sctransform)
+
+neuronal_markers <- c("Aatf", "Abca4", "Acly", "Acvr2b", "Afap1", "Aggf1", "Ahi1", "Akap9", "Alkbh1", "Amn1",
+                      "Ankrd12", "Ap1ar", "Ap3b2", "Arf2", "Arid4b", "Armc10", "B630019K06Rik", "Barhl1", "Bax",
+                      "Baz2b", "Bcl2l1", "Bcl7a", "Bhlhe22", "Brwd1", "Btbd9", "Cab39", "Cacna2d1", "Cacnb3", 
+                      "Cadm3", "Camta1", "Ccng2", "Ccnt1", "Cdk5r1", "Celf1", "Celf4", "Cep170", "Chd3os", "Chga", 
+                      "Chgb", "Clcn4", "Cmip", "Cnot7", "Col8a1", "Cplx2", "Crmp1", "Csnk2a1", "Ctps", "Cxxc5", 
+                      "Cyp51", "Dach1", "Dcc", "Dcx", "Dda1", "Ddx24", "Dll3", "Dnajb6", "Dnajc2", "Dnajc5", "Dner", 
+                      "Dohh", "Dpysl4", "Draxin", "Dync1li1", "Ehmt1", "Elavl2", "Elavl3", "Elavl4", "Eomes", "Ephb2", 
+                      "Fam110a", "Fam134b", "Fam210b", "Fam57b", "Fam96b", "Fdft1", "Fdps", "Fiz1", "Fnbp1l", "Fsd1", 
+                      "Fyttd1", "Gadd45gip1", "Gamt", "Gap43", "Gatad2b", "Gch1", "Gdap1l1", "Gdpd1", "Glyr1", "Gnb3", 
+                      "Gng3", "Gpr162", "Gramd1a", "Gse1", "Gtf2f2", "Hap1", "Hdgfrp3", "Hist3h2a", "Homer2", "Hsdl1", 
+                      "Hsp90aa1", "Hsph1", "Htatsf1", "Huwe1", "Igsf21", "Ina", "Insm1", "Islr2", "Itfg2", "Jkamp", 
+                      "Jmjd1c", "Kctd13", "Kctd5", "Kdm1a", "Khdrbs2", "Kif5b", "Kif5c", "Klhl7", "Lcmt1", "Lhx2", 
+                      "Lhx5", "Lhx9", "Lmo1", "Lsm14b", "Luc7l", "Lzts1", "Mab21l1", "Map2", "Mapk8", "Mapk8ip1", 
+                      "Mapt", "43525", "43529", "Mdga1", "Med22", "Med27", "Mex3b", "Mgarp", "Midn", "Mllt11", "Mpp3", 
+                      "Mrpl34", "Mrto4", "Msantd3", "Mtf2", "Mycl", "Mycn", "Mzt1", "Nap1l5", "Nbea", "Ndrg3", "Neurod1", 
+                      "Neurod4", "Nipsnap1", "Nmral1", "Nova2", "Npepps", "Nsg2", "Nt5c3", "Ntm", "Ntmt1", "Numbl", 
+                      "Olfm1", "Onecut2", "Pabpn1", "Pafah1b1", "Palm", "Panx1", "Parp6", "Patz1", "Pcmt1", "Pfdn4", 
+                      "Pkm", "Plppr3", "Pnmal2", "Ppa2", "Ppil4", "Ppm1b", "Ppp1r8", "Ppp2r5e", "Prkaca", "Proser1", 
+                      "Psmb7", "Psmd14", "Ptbp2", "Rab3a", "Rab3b", "Rabep1", "Raf1", "Ralgds", "Rcor2", "Reln", 
+                      "Rgs16", "Rnd2", "Rnd3", "Rnf165", "Rnf5", "Rnmt", "Rpf2", "Rrn3", "Rsrc1", "Rtn2", "Rufy3", 
+                      "Rundc3a", "Sag", "Sbk1", "Scg3", "Sez6l2", "Shmt2", "Siah1a", "Slc17a6", "Slc38a1", "Slc39a6", 
+                      "Smarcc2", "Smarcd1", "Sms", "Snap25", "Snapc3", "Socs2", "Soga3", "Srpk1", "Srrm4", "St8sia2", 
+                      "Stau1", "Stmn2", "Stmn3", "Stmn4", "Strip1", "Synpr", "Tagln3", "Tbc1d16", "Tbpl1", "Tcerg1", 
+                      "Tdrkh", "Tecpr1", "Timm50", "Tmcc1", "Tmeff1", "Tmem57", "Tmod2", "Tmx4", "Tomm70a", "Top2b", 
+                      "Tram1l1", "Trim2", "Trp53bp1", "Tsg101", "Ttc9b", "Tubb3", "Tubb4a", "Txnrd1", "Ube2b", "Ubqln1", 
+                      "Usf1", "Usp11", "Usp3", "Usp5", "Vamp2", "Whsc1", "Wrb", "X1700037H04Rik", "X4833420G17Rik", 
+                      "Yeats4", "Ypel1", "Yrdc", "Zcchc12", "Zdhhc16", "Zfp292", "Zfp358", "Zfp444", "Zfp512", "Zfp553", 
+                      "Zfp68", "Zfp821")
+epithelial_markers <- c("Acaa2", "Aqp1", "Arsg", "Atp1b1", "Atp5g1", "Bphl", "Bsg", "Calml4", "Capsl", "Car12", 
+                        "Car14", "Car2", "Ccdc113", "Cfap126", "Chchd10", "Clic6", "Clu", "Col8a2", "Col9a3", 
+                        "Cox8a", "Crb3", "Dcaf12l1", "Dnajb13", "Dpcd", "Dynlrb2", "Enpp2", "Fam183b", "Fbxo36", 
+                        "Fhit", "Folr1", "Fxyd1", "Gm29538", "Gpx8", "Htr2c", "Igfbp2", "Kcne2", "Kcnj13", "Klk4", 
+                        "Krt18", "Krt8", "Lbp", "Lrpap1", "Lrrc51", "Mcee", "Mlf1", "Msx1", "Mt3", "Ndufa13", 
+                        "Ndufa4", "Nme5", "Perp", "Pifo", "Pla2g16", "Prr32", "Ptgds", "Riiad1", "Rsph1", "Rsph9", 
+                        "Serpinb1b", "Sfrp1", "Slc16a2", "Slc16a8", "Slc22a17", "Slc31a1", "Slc4a2", "Slc6a15", 
+                        "Slc7a10", "Slco1a4", "Sostdc1", "Spa17", "Spint2", "Sulf1", "Tmem9", "Trpm3", "Ttr", 
+                        "Ubxn11", "Vat1l", "Wfikkn2", "X1110017D15Rik", "X1500015O10Rik", "X1700012B09Rik", 
+                        "X1700016K19Rik", "X1700088E04Rik", "X1810058I24Rik", "X2410004P03Rik", "X4833427G06Rik")
+# Create a list of glial markers
+glial_markers <- c("Acyp2", "Aif1l", "Ak2", "Aldoc", "Amd1", "Armcx2", "Arxes1", "Arxes2", "Asf1a", "Atp1a2", 
+                   "B3galnt1", "Bcan", "Bcat1", "Bckdk", "Bfar", "Btbd1", "Btf3l4", "Camk2d", "Capn6", "Cask", 
+                   "Cbx3", "Ccdc90b", "Ccna2", "Cdc123", "Cdca3", "Cdca8", "Cdo1", "Cenpf", "Cenpm", "Cisd2", 
+                   "Ckap5", "Cks2", "Cnot2", "Col2a1", "Cops2", "Creb5", "Cspg5", "Cstf2t", "Cux1", "Cwc15", 
+                   "Cxcr4", "D1Ertd622e", "Dab1", "Dcaf8", "Dclk1", "Dfna5", "Dhrs1", "Dkc1", "Dnajc24", "Dok5", 
+                   "Dut", "Ebna1bp2", "Eif4e", "Eln", "Elp4", "Emc10", "Epha7", "Eprs", "Etf1", "Fam204a", "Fam92a", 
+                   "Fbxo2", "Fgf15", "Fgf17", "Fgf8", "Fgfr1", "Gart", "Gcsh", "Gdpd2", "Glg1", "Gm28050", "Gm29478", 
+                   "Gpd2", "Gtf2i", "Guf1", "Hadh", "Hdac3", "Hes5", "Hnrnpll", "Hs2st1", "Hspa13", "Htra1", "Id4", 
+                   "Igfbp5", "Il17rd", "Ilkap", "Immt", "Ipo5", "Irf2bpl", "Jarid2", "Kif21a", "Kitl", "Klhl9", "Krt19", 
+                   "Lect1", "Lix1", "Lockd", "Lrrn1", "Lsm6", "Lyar", "Magoh", "Mapre2", "Maz", "Mbip", "Mcm2", "Mcm5", 
+                   "Med25", "Med4", "Megf11", "Mettl9", "Mff", "Mgst1", "Mid1ip1", "Mlc1", "Mllt3", "Mpp6", "Mpst", 
+                   "Mrpl3", "Mrpl50", "Msh2", "Myh10", "Naa10", "Naa50", "Nars", "Ncaph2", "Ndnl2", "Nipbl", "Nkx2.1", 
+                   "Nol7", "Nop10", "Npm3", "Nsfl1c", "Nusap1", "Nxn", "Olig1", "Otx1", "Oxct1", "Paics", "Paqr4", 
+                   "Pbdc1", "Pbk", "Pcnp", "Pfdn6", "Pfkl", "Plcd4", "Poldip3", "Polr3h", "Ppp1r1a", "Prkag1", "Prkca", 
+                   "Prpf19", "Prr7", "Psat1", "Psmd13", "Psmd3", "Psmd5", "Ptpra", "Ptprz1", "Puf60", "Pvrl3", "Pygb", 
+                   "Racgap1", "Rad21", "Rad23b", "Rfc1", "Rfc3", "Rhno1", "Rnf10", "Rnf2", "Rnps1", "Rp9", "Rpa2", "Rpa3", 
+                   "Rrm1", "Rrm2", "Rrp1", "Sap30", "Sema6d", "Sesn3", "Sf3b6", "Sfxn5", "Siva1", "Six3", "Skp1a", 
+                   "Slc1a3", "Slc27a1", "Slc39a1", "Slit2", "Smarcd3", "Smu1", "Snx1", "Sox2", "Spc25", "Spcs2", "Spry2", 
+                   "Srsf9", "Ssbp1", "Stoml2", "Tardbp", "Tbl1x", "Tceal3", "Tfg", "Tgfb2", "Thoc3", "Tipin", "Tmem132c", 
+                   "Tmem47", "Tnpo3", "Top2a", "Tpx2", "Tst", "Ttyh1", "U2surp", "Ube2c", "Ubxn4", "Unc119", "Upf3b", 
+                   "Usp1", "Usp51", "Wdr6", "Wls", "X0610007P14Rik", "X1110001J03Rik", "X1810022K09Rik", "X2810004N23Rik", 
+                   "X4930402H24Rik", "X4931429I11Rik", "Xrn2", "Zfhx3", "Zfhx4", "Zfp664", "Zmynd11")
+
+# Create a list of immune markers
+immune_markers <- c("AB124611", "Abca1", "Abhd12", "Abi1", "Acads", "Acp5", "Acsl5", "Actr3", "Adgre1", "Adrb2",
+                    "Adrbk1", "AF251705", "AI413582", "AI607873", "AI662270", "Aif1", "Akap13", "Akr1b3", "Alox5ap",
+                    "Amdhd2", "Anxa1", "Ap1b1", "Ap2a2", "Apbb1ip", "Apobec1", "Arhgap17", "Arhgap19", "Arhgap25",
+                    "Arhgap30", "Arhgap9", "Arhgdib", "Arid3a", "Arl8b", "Arrb2", "Asah1", "Asnsd1", "Atf3", "Atp13a2",
+                    "Atp6ap1", "Aup1", "B4galnt1", "Baz1a", "Bcl2a1b", "Bin1", "Bin2", "Bin3", "Blvra", "C1qa", "C1qb",
+                    "C1qc", "C3ar1", "C5ar1", "Capza1", "Casp1", "Ccdc50", "Ccl12", "Ccl2", "Ccl24", "Ccl3", "Ccl4",
+                    "Ccl6", "Ccl7", "Ccl9", "Ccr1", "Ccr2", "Ccrl2", "Cd14", "Cd180", "Cd200r1", "Cd300a", "Cd36", 
+                    "Cd37", "Cd44", "Cd48", "Cd52", "Cd53", "Cd68", "Cd74", "Cd79b", "Cd83", "Cd84", "Cd86", "Cdk2ap2", 
+                    "Cebpa", "Cela1", "Cept1", "Cfp", "Chst12", "Clec10a", "Clec12a", "Clec4a1", "Clec4a2", "Clec4a3", 
+                    "Clec4n", "Cln8", "Clta", "Cltc", "Cmtm7", "Cndp2", "Cnppd1", "Cnpy3", "Commd4", "Commd8", "Coro1a",
+                    "Creg1", "Crlf3", "Cryba4", "Crybb1", "Csf1r", "Csf2ra", "Csf2rb", "Csrnp1", "Cstb", "Ctla2b",
+                    "Ctsa", "Ctsb", "Ctss", "Cx3cr1", "Cxcl1", "Cxcl2", "Cybb", "Cyfip1", "Cyth4", "Dab2", "Daglb",
+                    "Dcxr", "Dera", "Dhrs3", "Dnase2a", "Dok1", "Dok2", "Dok3", "Dtnbp1", "Dusp11", "Dusp2", "Dusp5",
+                    "E2f4", "Ebi3", "Ebp", "Edem1", "Efhd2", "Egr2", "Ehbp1l1", "Elf1", "Emilin2", "Eps15", "Ethe1",
+                    "Evi2a", "F13a1", "Fam105a", "Fam111a", "Fam213b", "Fam96a", "Fcer1g", "Fcgr1", "Fcgr2b", "Fcgr3",
+                    "Fcna", "Fcrls", "Fermt3", "Fes", "Fgd2", "Folr2", "Fyb", "G6pdx", "Gas7", "Gatm", "Gbp7", "Glipr1",
+                    "Gm10116", "Gm12166", "Gm16286", "Gm26522", "Gm26532", "Gm2a", "Gm6377", "Gna12", "Gna15", "Gpr183",
+                    "Gpr34", "Gpr65", "Gpsm3", "Gsdmd", "Gusb", "H2.DMa", "Hacd4", "Hck", "Hcls1", "Hcst", "Hexa", "Hexb",
+                    "Hk2", "Hk3", "Hmgcl", "Hmha1", "Hpgds", "Ifi202b", "Ifi27l2a", "Ifi30", "Ifnar2", "Igf1", "Igsf6",
+                    "Ikzf1", "Il16", "Il18", "Il1b", "Il21r", "Il4ra", "Il6ra", "Imp4", "Inpp5d", "Irf5", "Irf8", "Itgb2",
+                    "Khk", "Lamtor4", "Lap3", "Laptm5", "Lbr", "Lcp2", "Lgals3", "Lilrb4a", "Lipa", "Lpxn", "Lrmp",
+                    "Lrrc25", "Lsp1", "Lst1", "Ltc4s", "Ly86", "Ly96", "Lyve1", "Lyz2", "Maf", "Man2b1", "Map2k1",
+                    "Mbnl1", "Mfsd1", "Milr1", "Mknk1", "Mndal", "Mpeg1", "Mrc1", "Mrps15", "Ms4a6b", "Ms4a6c", "Ms4a6d",
+                    "Ms4a7", "Msr1", "Msrb1", "Mvp", "Myo1f", "Myo5a", "N4bp2l1", "Nadk", "Nagpa", "Napsa", "Ncf1", "Ncf2",
+                    "Ncf4", "Nckap1l", "Neat1", "Nfam1", "Nfe2l2", "Nfkbid", "Nfkbiz", "Nme4", "Nmt1", "Npl", "Nrm", 
+                    "Ntpcr", "Ocel1", "Ogfrl1", "P2rx4", "P2ry12", "P2ry6", "Paox", "Parvg", "Pdcd6ip", "Pepd", "Pf4", 
+                    "Pgd", "Pglyrp1", "Pim1", "Pkib", "Pkn1", "Pla2g15", "Pld4", "Plek", "Plekhj1", "Plekho2", "Plgrkt", 
+                    "Plin2", "Por", "Ppp1r18", "Prkcd", "Prr13", "Psap", "Psmb10", "Psmb8", "Psmb9", "Ptgs1", "Ptpn18", 
+                    "Ptpn6", "Ptprc", "Ptpre", "Pycard", "Rab32", "Rac2", "Rasgef1b", "Rbfa", "Reep5", "Renbp", "Rgs1", 
+                    "Rgs10", "Rhoh", "Rnase4", "Rnasel", "Rnf115", "Rnf13", "Rnf130", "Rnf149", "Rnpep", "Rragc", "Rtfdc1", 
+                    "Rtp4", "Runx1", "S100a6", "S100a8", "Samhd1", "Samsn1", "Scamp2", "Sdf2l1", "Sec11c", "Selplg", "Serp1", 
+                    "Sesn1", "Sgpl1", "Sh3kbp1", "Shisa5", "Sirpa", "Sirt2", "Sirt7", "Skap2", "Sla", "Slc11a1", "Slc15a3", 
+                    "Slc40a1", "Slc7a7", "Slc9a9", "Slco2b1", "Slfn2", "Smap2", "Snx2", "Snx20", "Snx8", "Sp110", "Spg21", 
+                    "Spi1", "Spic", "Ssh2", "Stab1", "Stard8", "Stk17b", "Stk24", "Stra13", "Stx7", "Stxbp2", "Syk", 
+                    "Syngr1", "Syngr2", "Szrd1", "Taf6l", "Taok3", "Tapbp", "Tbxas1", "Tifa", "Tifab", "Tlr2", "Tmem106a")
+
+# Create a list of endothelial markers
+endothelial_markers <- c("Aars", "Abhd17c", "Ablim1", "Acat1", "Acot9", "Actn4", "Adgrf5", "Adgrl4", "Adrm1",
+                         "Afap1l1", "Agrn", "Airn", "Apbb2", "Apln", "Aplnr", "Aplp2", "Apold1", "Arap3",
+                         "Arhgap18", "Arhgap29", "Arhgef15", "Arl6ip5", "Arpc5l", "Asb4", "Atox1", "AU021092",
+                         "Babam1", "Bace2", "Bak1", "Bcl6b", "Bhlhe40", "Btbd3", "Bvht", "C130074G19Rik",
+                         "Card19", "Cav1", "Cav2", "Ccdc12", "Ccdc28b", "Ccdc85a", "Ccdc85b", "Cct4", "Cd34",
+                         "Cd93", "Cda", "Cdc42ep1", "Cdc42ep2", "Cdc42ep3", "Cdipt", "Cds2", "Chmp2b", "Chmp6",
+                         "Chst15", "Ciapin1", "Cldn5", "Clec14a", "Clec1a", "Clptm1", "Cnih4", "Coa3", "Col15a1",
+                         "Cope", "Cpsf3l", "Cr1l", "Cracr2b", "Crem", "Crk", "Ctla2a", "Ctnna1", "Ctnnbip1",
+                         "Cyb5r3", "Cyyr1", "Dapk3", "Dcbld1", "Dcps", "Ddx54", "Degs1", "Dll4", "Dok4", "Dusp3",
+                         "Dysf", "Ece1", "Ecscr", "Efna1", "Efnb2", "Egfl7", "Elf2", "Ephb4", "Erf", "Erg", "Esam",
+                         "Ets2", "Exoc3l", "F11r", "Fam101b", "Fam114a2", "Fam129b", "Fam13c", "Fam167b", 
+                         "Fam198b", "Fam43a", "Fbxw2", "Fgd5", "Fis1", "Flt1", "Fmnl3", "Foxo1", "Fzd4", "Gadd45g",
+                         "Gchfr", "Ggta1", "Gimap1", "Gimap4", "Gimap5", "Gimap6", "Ginm1", "Gja4", "Gm11808",
+                         "Gm13889", "Gmpr", "Gne", "Gpihbp1", "Gpr182", "Grasp", "Grrp1", "Gtf2e2", "Hbegf", 
+                         "Hdac7", "Heg1", "Hmbox1", "Hmg20b", "Homer3", "Hspa12b", "Hspg2", "Hyal2", "Icam1",
+                         "Icam2", "Ier3ip1", "Igf2r", "Igfbp3", "Ipo11", "Irx3", "Itga5", "Itpkb", "Jup", "Kank3",
+                         "Kctd12b", "Kctd20", "Kdr", "Klhl4", "Kti12", "Lamc1", "Lifr", "Limch1", "Lpar4", "Lrg1",
+                         "Lrp10", "Lrrc8c", "Lta4h", "Ltbr", "Luzp1", "Ly6c1", "Macf1", "Map3k11", "Map4", "Marc2",
+                         "Mast4", "Mcam", "Mcf2l", "Med10", "Med28", "Mef2a", "Mgat1", "Mgll", "Mgst3", "Mkl2",
+                         "Mllt4", "Mmrn2", "Mob2", "Mrpl4", "Mrps11", "Mrps24", "Mum1", "Myct1", "Myl6", "Myo18a",
+                         "Myo6", "Myzap", "Naa20", "Napa", "Nck1", "Ndfip2", "Ndrg1", "Ndufa10", "Ndufv1",
+                         "Nelfb", "Net1", "Nfkb1", "Nid2", "Nme2", "Notch1", "Npr1", "Nrarp", "Nsmce1", "Oit3",
+                         "Orai1", "Oxa1l", "Pak2", "Pald1", "Pam", "Parvb", "Pcdh1", "Pcdh12", "Pcdh17", "Pdcd10",
+                         "Pdcl3", "Pde2a", "Pde8a", "Pdgfb", "Pecam1", "Pgm1", "Phldb2", "Piezo2", "Pim3", 
+                         "Plagl1", "Plekha1", "Plod1", "Plp2", "Pls3", "Plscr2", "Plvap", "Plxnd1", "Pnkd", 
+                         "Podxl", "Polr2e", "Pomp", "Pon2", "Ppdpf", "Ppp1r16b", "Pqlc1", "Prdx6", "Prex2",
+                         "Prkch", "Procr", "Psmb1", "Psmc2", "Ptp4a3", "Ptprb", "Pvrl2", "Pxn", "Rab1a", "Rab1b",
+                         "Rab2a", "Rab35", "Ralgps2", "Ramp3", "Rapgef3", "Rarg", "Rasgrp3", "Rasip1", "Rassf3",
+                         "Rbck1", "Rbm42", "Rer1", "Rgl2", "Rgs3", "Robo4", "Rps27rt", "S1pr1", "Samm50", "Sbds",
+                         "Scarb1", "Scarf1", "Sdhb", "Sdpr", "Sec14l1", "Sept4", "Sgk1", "Sh2b3", "Sh2d3c", "Sh3glb2",
+                         "She", "Sigirr", "Slc31a2", "Slc39a8", "Slc43a3", "Slc44a2", "Slc7a5", "Slco2a1", "Slmo2",
+                         "Smarcd2", "Smtn", "Snrk", "Sod1", "Sox17", "Sox18", "Sox7", "Ssna1", "Ssu72", "St3gal5",
+                         "St6galnac3", "Stk25", "Sult1a1", "Supt4a", "Syf2", "Sypl", "Tbxa2r", "Tcf15", "Tek",
+                         "Tgfbr2", "Thoc7", "Thsd1", "Tie1", "Tjp1", "Tln2", "Tm2d3", "Tmed9", "Tmem109", "Tmem123",
+                         "Tmem204", "Tmem252", "Tmem255a", "Tmem44", "Tmem88", "Tnfaip8l1", "Tnfrsf11b", "Tonsl",
+                         "Traf7", "Tspan14", "Tspan15", "Tspan18", "Tspan9", "Uba52", "Ubald2", "Ubb", "Ube2a", 
+                         "Ubn1", "Unc45b", "Uqcc3", "Uqcrc1", "Urm1", "Ushbp1", "Vamp5", "Vwa1", "Wwtr1",
+                         "X0610037L13Rik", "X1700020I14Rik", "X1810011O10Rik", "X2900026A02Rik", "X4930523C07Rik",
+                         "X4931406P16Rik", "X8430408G22Rik", "X9430020K01Rik", "Yes1", "Zdhhc20")
+
+
+
+
+MmagecomparedChoroid.data<- Read10X(data.dir = "seurat/", gene.column = 1)
+MmagecomparedChoroid <- CreateSeuratObject(counts = MmagecomparedChoroid.data, project = "MmagecomparedChoroid", min.cells = 3, min.features = 200)
+
+head(MmagecomparedChoroid@meta.data)
+MmagecomparedChoroid_embryo<-subset(MmagecomparedChoroid, subset = orig.ident == "Embryo") 
+MmagecomparedChoroid_adult<-subset(MmagecomparedChoroid, subset = orig.ident == "Adult") 
+MmagecomparedChoroid_aged<-subset(MmagecomparedChoroid, subset = orig.ident == "Aged")
+
+MmagecomparedChoroid[["percent.mt"]] <- PercentageFeatureSet(MmagecomparedChoroid, pattern = "^mt-")
+VlnPlot(MmagecomparedChoroid, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+MmagecomparedChoroid<- subset(MmagecomparedChoroid, subset = nFeature_RNA > 200 & nFeature_RNA < 5000 &  percent.mt < 5)
+all.genes_s1 <- rownames(MmagecomparedChoroid)
+MmagecomparedChoroid<- SCTransform(MmagecomparedChoroid, vars.to.regress = "percent.mt", verbose = FALSE)
+
+saveRDS(MmagecomparedChoroid, file = "whole_MMageschoroid.rds")
+MmagecomparedChoroid<-readRDS("whole_MMageschoroid.rds")
+top10.MmagecomparedChoroid <- head(VariableFeatures(MmagecomparedChoroid), 10)
+
+plot1 <- VariableFeaturePlot(MmagecomparedChoroid)
+plot2 <- LabelPoints(plot = plot1, points = top10.MmagecomparedChoroid, repel = TRUE)
+MmagecomparedChoroid <- RunPCA(MmagecomparedChoroid, features = VariableFeatures(object = MmagecomparedChoroid))
+ElbowPlot(MmagecomparedChoroid)
+MmagecomparedChoroid[["RNA"]] <- split(MmagecomparedChoroid[["RNA"]], f = MmagecomparedChoroid$orig.ident)
+MmagecomparedChoroid <- FindNeighbors(MmagecomparedChoroid, dims = 1:5)
+MmagecomparedChoroid_0.1 <- FindClusters(MmagecomparedChoroid, resolution = 0.1)
+MmagecomparedChoroid_0.1 <- RunUMAP(MmagecomparedChoroid_0.1, dims = 1:5)
+DimPlot(MmagecomparedChoroid_0.1, reduction = "umap")
+DimPlot(MmagecomparedChoroid, reduction = "umap", split.by = "orig.ident")
+DoHeatmap(MmagecomparedChoroid_0.1, features = c("Acaa2","Aqp1","Arsg","Atp1b1","A830082K12Rik","Aamp","Aard","Abcc9"))+ NoLegend()
+
+DoHeatmap(MmagecomparedChoroid_0.1, features = c("Slc1a3","Gfap","Aqp1","Kcnj13","Enpp2", "Htr2c","Col1a1","Lum","Dcn","Col1a2","Col3a1","Abcc9","Adam12","Ptprc", "Hmha1", "P2ry6","Ly86", "Pecam", "Flt1","Plvap"))+ NoLegend()
+DoHeatmap(MmagecomparedChoroid_0.1, features = c("Coch"))+ NoLegend()
+#3
+DoHeatmap(MmagecomparedChoroid_0.1, features = epithelial_markers)+ NoLegend()
+#0,1,2
+DoHeatmap(MmagecomparedChoroid_0.1, features = endothelial_markers)+ NoLegend()
+#5
+DoHeatmap(MmagecomparedChoroid_0.1, features = immune_markers)+ NoLegend()
+#7
+DoHeatmap(MmagecomparedChoroid_0.1, features = neuronal_markers)+ NoLegend()
+#6
+DoHeatmap(MmagecomparedChoroid_0.1, features = glial_markers)+ NoLegend()
+
+DoHeatmap(MmagecomparedChoroid_0.1, features = c("Slc1a3","Gfap","Aqp1","Kcnj13","Enpp2", "Htr2c","Col1a1","Lum","Dcn","Col1a2","Col3a1","Abcc9","Adam12","Ptprc", "Hmha1", "P2ry6","Ly86", "Pecam", "Flt1","Plvap"))+ NoLegend()
+
+MmagecomparedChoroid0.1.markers<-FindAllMarkers(MmagecomparedChoroid_0.1,logfc.threshold = 0.25)
+write.csv(MmagecomparedChoroid0.1.markers, file = "mouse choroid all ages markers.csv", row.names = FALSE)
+cluster3.markers <- FindMarkers(MmagecomparedChoroid_0.1, ident.1 = 3, logfc.threshold = 0.25)
+
+VlnPlot(MmChoroid_mesenchyme, features =c("Coch"),split.by = "orig.ident")
+new.cluster.infected.ids <- c("Epithelium 1", "Epithelium 2","Epithelium 3", "Mesenchyme","Unidentified","Endothelium","Neurons and Glia", "Immune")
+
+names(new.cluster.infected.ids) <- levels(MmagecomparedChoroid_0.1)
+unique(Idents(MmagecomparedChoroid_0.1))
+MmagecomparedChoroid_0.1 <- RenameIdents(MmagecomparedChoroid_0.1, new.cluster.infected.ids)
+#final doheatmap
+DoHeatmap(MmagecomparedChoroid_0.1, features = c("Ttr", "Enpp2", "Htr2c","Trpm3","Ptgds","Vat1l", "Col1a1","Lum","Dcn","Col1a2","Col3a1","Abcc9","Adam12","Flt1","Plvap","Dab1", "Slit2","Tmem132c", "Slc1a3","Gfap", "Elav2","Elav3","Ntm""Ptprc", "Hmha1", "P2ry6","Ly86"))+ NoLegend()
+VlnPlot(MmChoroid_mesenchyme, features =c("Coch"),split.by = "orig.ident")
+DimPlot(MmagecomparedChoroid_0.1, reduction = "umap")
+DimPlot(MmagecomparedChoroid, reduction = "umap", split.by = "orig.ident")
